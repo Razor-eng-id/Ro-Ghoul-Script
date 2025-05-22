@@ -1,38 +1,115 @@
--- Combat Hub GUI (drag-able, basic UI)
-local ScreenGui = Instance.new("ScreenGui")
+-- GUI Hub
+local ScreenGui = Instance.new("ScreenGui", game.Players.LocalPlayer:WaitForChild("PlayerGui"))
 ScreenGui.Name = "RoGhoulHub"
 ScreenGui.ResetOnSpawn = false
-ScreenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
 
-local Frame = Instance.new("Frame")
-Frame.Size = UDim2.new(0, 250, 0, 150)
-Frame.Position = UDim2.new(0.5, -125, 0.5, -75)
+local Frame = Instance.new("Frame", ScreenGui)
+Frame.Size = UDim2.new(0, 250, 0, 200)
+Frame.Position = UDim2.new(0.5, -125, 0.5, -100)
 Frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 Frame.BorderSizePixel = 0
 Frame.Active = true
 Frame.Draggable = true
-Frame.Parent = ScreenGui
 
-local Title = Instance.new("TextLabel")
+local Title = Instance.new("TextLabel", Frame)
 Title.Size = UDim2.new(1, 0, 0, 30)
 Title.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 Title.Text = "Ro-Ghoul Script"
 Title.TextColor3 = Color3.new(1, 1, 1)
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 16
-Title.Parent = Frame
 
-local AutoLock = Instance.new("TextButton")
-AutoLock.Size = UDim2.new(1, -20, 0, 40)
-AutoLock.Position = UDim2.new(0, 10, 0, 50)
+-- Tombol Auto Lock
+local AutoLock = Instance.new("TextButton", Frame)
+AutoLock.Size = UDim2.new(1, -20, 0, 30)
+AutoLock.Position = UDim2.new(0, 10, 0, 40)
 AutoLock.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 AutoLock.Text = "Auto Lock"
 AutoLock.TextColor3 = Color3.new(1, 1, 1)
 AutoLock.Font = Enum.Font.Gotham
 AutoLock.TextSize = 14
-AutoLock.Parent = Frame
 
 AutoLock.MouseButton1Click:Connect(function()
-    -- Ganti ini dengan logika auto-lock kamu
-    print("Auto Lock Activated")
+    local player = game.Players.LocalPlayer
+    local char = player.Character or player.CharacterAdded:Wait()
+    local hrp = char:WaitForChild("HumanoidRootPart")
+
+    local closest = nil
+    local shortest = math.huge
+
+    for _, plr in pairs(game.Players:GetPlayers()) do
+        if plr ~= player and plr.Character and plr.Team ~= player.Team then
+            local target = plr.Character:FindFirstChild("HumanoidRootPart")
+            if target then
+                local dist = (hrp.Position - target.Position).Magnitude
+                if dist < shortest then
+                    shortest = dist
+                    closest = target
+                end
+            end
+        end
+    end
+
+    if closest then
+        hrp.CFrame = CFrame.new(hrp.Position, closest.Position)
+        print("Locked to:", closest.Parent.Name)
+    else
+        print("No enemies nearby")
+    end
+end)
+
+-- Input Radius
+local RadiusInput = Instance.new("TextBox", Frame)
+RadiusInput.Size = UDim2.new(1, -20, 0, 30)
+RadiusInput.Position = UDim2.new(0, 10, 0, 80)
+RadiusInput.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+RadiusInput.PlaceholderText = "Radius (1 - 10)"
+RadiusInput.TextColor3 = Color3.new(1, 1, 1)
+RadiusInput.Font = Enum.Font.Gotham
+RadiusInput.TextSize = 14
+RadiusInput.Text = ""
+
+-- Tombol Teleport
+local TeleportButton = Instance.new("TextButton", Frame)
+TeleportButton.Size = UDim2.new(1, -20, 0, 30)
+TeleportButton.Position = UDim2.new(0, 10, 0, 120)
+TeleportButton.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+TeleportButton.Text = "Teleport to Nearest NPC"
+TeleportButton.TextColor3 = Color3.new(1, 1, 1)
+TeleportButton.Font = Enum.Font.Gotham
+TeleportButton.TextSize = 14
+
+TeleportButton.MouseButton1Click:Connect(function()
+    local radius = tonumber(RadiusInput.Text)
+    if not radius or radius < 1 or radius > 10 then
+        warn("Masukkan radius antara 1 sampai 10")
+        return
+    end
+
+    local player = game.Players.LocalPlayer
+    local char = player.Character or player.CharacterAdded:Wait()
+    local hrp = char:WaitForChild("HumanoidRootPart")
+
+    local closest = nil
+    local closestDist = math.huge
+
+    for _, npc in ipairs(workspace:GetDescendants()) do
+        if npc:IsA("Model") and npc:FindFirstChild("Humanoid") and npc:FindFirstChild("HumanoidRootPart") then
+            local name = npc.Name:lower()
+            if name:find("human") or name:find("ghoul") or name:find("ccg") or name:find("athlete") then
+                local dist = (hrp.Position - npc.HumanoidRootPart.Position).Magnitude
+                if dist < (radius * 10) and dist < closestDist then
+                    closest = npc
+                    closestDist = dist
+                end
+            end
+        end
+    end
+
+    if closest then
+        hrp.CFrame = closest.HumanoidRootPart.CFrame + Vector3.new(0, 3, 0)
+        print("Teleported to NPC:", closest.Name)
+    else
+        print("No NPC found within radius.")
+    end
 end)
