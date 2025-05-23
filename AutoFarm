@@ -1,8 +1,7 @@
 local OrionLib = loadstring(game:HttpGet('https://raw.githubusercontent.com/shlexware/Orion/main/source/Orion.lua'))()
 
-local Window = OrionLib:MakeWindow({Name = "Ro-Ghoul Hub", HidePremium = false, SaveConfig = true, ConfigFolder = "RoGhoulHub"})
+local Window = OrionLib:MakeWindow({Name = "Ro-Ghoul Hub Simple", HidePremium = false, SaveConfig = true, ConfigFolder = "RoGhoulHubSimple"})
 
--- Variables
 local attackRadius = 20
 local autoFarmAogiri = false
 local autoFarmHuman = false
@@ -10,31 +9,26 @@ local autoFarmInvestigator = false
 local autoQuest = false
 local autoHeal = false
 local trainerSpeed = 16
-local trainerDamage = 1
-local autoStats = false
 
--- Utility functions
-local function getDistance(pos1, pos2)
-    return (pos1 - pos2).Magnitude
+local function getDistance(p1, p2)
+    return (p1 - p2).Magnitude
 end
 
-local function getClosestTarget(groupName)
+local function getTargets(groupName)
     local plr = game.Players.LocalPlayer
     local char = plr.Character
-    if not char or not char:FindFirstChild("HumanoidRootPart") then return nil end
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return {} end
     local hrp = char.HumanoidRootPart
     local targets = {}
-
     for _, npc in pairs(workspace:GetChildren()) do
         if npc.Name == groupName and npc:FindFirstChild("Humanoid") and npc.Humanoid.Health > 0 and npc:FindFirstChild("HumanoidRootPart") then
             local dist = getDistance(hrp.Position, npc.HumanoidRootPart.Position)
             if dist <= attackRadius then
-                table.insert(targets, {npc = npc, dist = dist})
+                table.insert(targets, npc)
             end
         end
     end
-    table.sort(targets, function(a,b) return a.dist < b.dist end)
-    return targets[1] and targets[1].npc or nil
+    return targets
 end
 
 local function attack(target)
@@ -44,33 +38,27 @@ local function attack(target)
     if not char or not char:FindFirstChild("HumanoidRootPart") then return end
     local hrp = char.HumanoidRootPart
 
-    -- Simple move to target in range and attack (dummy attack)
     local dist = getDistance(hrp.Position, target.HumanoidRootPart.Position)
     if dist > 3 then
-        -- Move closer but keep distance > 2 for safety
         local direction = (target.HumanoidRootPart.Position - hrp.Position).Unit
         local safePos = target.HumanoidRootPart.Position - direction * 2.5
         char:PivotTo(CFrame.new(safePos))
     else
-        -- Attack logic here, e.g. activate tool or send attack remote event
-        -- NOTE: This part harus kamu sesuaikan sama mekanik Ro-Ghoul server
-        -- Contoh dummy:
         local tool = char:FindFirstChildOfClass("Tool")
-        if tool and tool:FindFirstChild("Handle") then
+        if tool then
             tool:Activate()
         end
     end
 end
 
--- Auto Heal
+-- Auto Heal function
 local function autoHealFunc()
     local plr = game.Players.LocalPlayer
     while autoHeal do
         local char = plr.Character
         if char and char:FindFirstChild("Humanoid") then
             if char.Humanoid.Health < char.Humanoid.MaxHealth then
-                -- Healing item atau logic healing disini
-                -- Contoh dummy wait
+                -- contoh dummy heal (bisa diubah sesuai item healing game)
                 wait(3)
             end
         end
@@ -78,45 +66,27 @@ local function autoHealFunc()
     end
 end
 
--- Auto Quest (dummy)
+-- Auto Quest dummy
 local function autoQuestFunc()
     while autoQuest do
-        -- Kamu sesuaikan quest otomatis sesuai game Ro-Ghoul
-        print("Auto Quest aktif...")
+        -- kamu bisa tambahin logika quest manual di sini
+        print("Auto Quest aktif")
         wait(5)
     end
 end
 
--- Trainer functions
-local function applyTrainer()
-    local plr = game.Players.LocalPlayer
-    local char = plr.Character
-    if char and char:FindFirstChild("Humanoid") then
-        char.Humanoid.WalkSpeed = trainerSpeed
-        char.Humanoid.Damage = trainerDamage -- contoh property damage, sesuaikan ya
-    end
-end
-
--- UI Tabs
-
--- Auto Farm Tab
-local AutoFarmTab = Window:MakeTab({
-    Name = "Auto Farm",
-    Icon = "rbxassetid://4483345998",
-    PremiumOnly = false
-})
-
+-- UI setup
+local AutoFarmTab = Window:MakeTab({Name = "Auto Farm", Icon = "rbxassetid://4483345998"})
 AutoFarmTab:AddSlider({
     Name = "Attack Radius",
     Min = 1,
     Max = 100,
     Default = attackRadius,
-    Color = Color3.fromRGB(255, 255, 255),
     Increment = 1,
     ValueName = "Stud",
     Callback = function(value)
         attackRadius = value
-    end    
+    end
 })
 
 AutoFarmTab:AddToggle({
@@ -127,13 +97,16 @@ AutoFarmTab:AddToggle({
         if value then
             spawn(function()
                 while autoFarmAogiri do
-                    local target = getClosestTarget("Aogiri")
-                    if target then attack(target) end
-                    wait(0.5)
+                    local targets = getTargets("Aogiri")
+                    for _, target in pairs(targets) do
+                        attack(target)
+                        wait(0.5)
+                    end
+                    wait(1)
                 end
             end)
         end
-    end    
+    end
 })
 
 AutoFarmTab:AddToggle({
@@ -144,13 +117,16 @@ AutoFarmTab:AddToggle({
         if value then
             spawn(function()
                 while autoFarmHuman do
-                    local target = getClosestTarget("Human")
-                    if target then attack(target) end
-                    wait(0.5)
+                    local targets = getTargets("Human")
+                    for _, target in pairs(targets) do
+                        attack(target)
+                        wait(0.5)
+                    end
+                    wait(1)
                 end
             end)
         end
-    end    
+    end
 })
 
 AutoFarmTab:AddToggle({
@@ -161,22 +137,19 @@ AutoFarmTab:AddToggle({
         if value then
             spawn(function()
                 while autoFarmInvestigator do
-                    local target = getClosestTarget("Investigator")
-                    if target then attack(target) end
-                    wait(0.5)
+                    local targets = getTargets("Investigator")
+                    for _, target in pairs(targets) do
+                        attack(target)
+                        wait(0.5)
+                    end
+                    wait(1)
                 end
             end)
         end
-    end    
+    end
 })
 
--- Auto Quest Tab
-local AutoQuestTab = Window:MakeTab({
-    Name = "Auto Quest",
-    Icon = "rbxassetid://4483345998",
-    PremiumOnly = false
-})
-
+local AutoQuestTab = Window:MakeTab({Name = "Auto Quest", Icon = "rbxassetid://4483345998"})
 AutoQuestTab:AddToggle({
     Name = "Auto Quest",
     Default = false,
@@ -185,68 +158,28 @@ AutoQuestTab:AddToggle({
         if value then
             spawn(autoQuestFunc)
         end
-    end    
+    end
 })
 
--- Trainer Tab
-local TrainerTab = Window:MakeTab({
-    Name = "Trainer",
-    Icon = "rbxassetid://4483345998",
-    PremiumOnly = false
-})
-
+local TrainerTab = Window:MakeTab({Name = "Trainer", Icon = "rbxassetid://4483345998"})
 TrainerTab:AddSlider({
     Name = "WalkSpeed",
     Min = 16,
     Max = 250,
     Default = trainerSpeed,
-    Color = Color3.fromRGB(255, 255, 255),
     Increment = 1,
     ValueName = "Speed",
     Callback = function(value)
         trainerSpeed = value
-        applyTrainer()
-    end    
-})
-
-TrainerTab:AddSlider({
-    Name = "Damage Multiplier",
-    Min = 1,
-    Max = 10,
-    Default = trainerDamage,
-    Color = Color3.fromRGB(255, 255, 255),
-    Increment = 0.1,
-    ValueName = "x",
-    Callback = function(value)
-        trainerDamage = value
-        applyTrainer()
-    end    
-})
-
-TrainerTab:AddToggle({
-    Name = "Auto Stats",
-    Default = false,
-    Callback = function(value)
-        autoStats = value
-        if value then
-            spawn(function()
-                while autoStats do
-                    -- Tambahkan logic auto stats di sini
-                    print("Auto Stats aktif")
-                    wait(10)
-                end
-            end)
+        local plr = game.Players.LocalPlayer
+        local char = plr.Character
+        if char and char:FindFirstChild("Humanoid") then
+            char.Humanoid.WalkSpeed = trainerSpeed
         end
-    end    
+    end
 })
 
--- Misc Tab
-local MiscTab = Window:MakeTab({
-    Name = "Misc",
-    Icon = "rbxassetid://4483345998",
-    PremiumOnly = false
-})
-
+local MiscTab = Window:MakeTab({Name = "Misc", Icon = "rbxassetid://4483345998"})
 MiscTab:AddToggle({
     Name = "Auto Heal",
     Default = false,
@@ -255,16 +188,15 @@ MiscTab:AddToggle({
         if value then
             spawn(autoHealFunc)
         end
-    end    
+    end
 })
-
 MiscTab:AddButton({
     Name = "Teleport to Spawn",
     Callback = function()
         local plr = game.Players.LocalPlayer
         local char = plr.Character
         if char and char:FindFirstChild("HumanoidRootPart") then
-            char.HumanoidRootPart.CFrame = CFrame.new(0, 10, 0) -- Ganti dengan posisi spawn di game Ro-Ghoul
+            char.HumanoidRootPart.CFrame = CFrame.new(0, 10, 0) -- sesuaikan spawn lokasi
         end
     end
 })
